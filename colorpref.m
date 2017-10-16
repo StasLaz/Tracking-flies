@@ -1,4 +1,4 @@
-function [color_preference,T1,T2,T3,filename,masks,background,vidObj,imgA] = new_colorpref_shake(flysize,multip,darker,ptThresh)
+function [color_preference,T1,T2,T3,filename,masks,background,vidObj,imgA] = colorpref(flysize,multip,darker,ptThresh)
 % For shacking video every minute
 
 %       flysize     approximate length of flies in videos in pixels. 
