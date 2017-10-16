@@ -32,7 +32,6 @@ T1 = [];
 T2 = [];
 T3 = [];
 t=1;
-frame = [];
 %Load video files
 [FileName, PathName] = uigetfile('*.*' , 'Select video files','MultiSelect','on');
 filename = fullfile(PathName, FileName);
