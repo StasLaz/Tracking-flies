@@ -1,8 +1,11 @@
-function [mask1,mask2,mask3,maskall] = delete_mask(~)
+function [mask1,mask2,mask3,maskall] = delete_mask(bg,PathName)
 % function to delete tubes with dead flies from masks. Uses bg from
 % readfr.m or colorpref.m
 % left click on zones you want to delete, right click to delete, then any
 % button to close window. New masks will have those zones deleted
+
+
+if nargin<2; PathName=[]; end
 
 [name,path]=uigetfile('.mat','Select masks',PathName);
 masks = fullfile(path,name);
@@ -50,6 +53,6 @@ close (figure(100))
 defaultans = {name};
 f_name = inputdlg('Write fly name','Edited mask',1,defaultans);
     f_name = char(f_name);
-    filename=char(fullfile(PathName,f_name));
+    filename=char(fullfile(path,f_name));
     
     save(filename,masks_to_write{:});

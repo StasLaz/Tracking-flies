@@ -34,23 +34,17 @@ filename = fullfile(PathName, FileName);
 masks = fullfile(path,name);
 
 
-% if masks ~= 0
 masks = cellstr(masks);
 
 for masknum = 1:length(masks)
     [~,name,~]=fileparts(char(masks(masknum)));
     path = [PathName,'coord',name(5:end)]; 
     mkdir(path);
-%     openfilename = [path,'coord',name(5:end),'.csv'];
-%     fid = fopen(openfilename,'a+');
-%     fprintf(fid,'%s\r\n',path);
-%     fprintf(fid,'%s\r\n',FileName(1:end));
-%     fclose(fid);
+
 end
 
-% end
 
-% Determin how many video files you selected
+% Determine how many video files you selected
 if iscell(filename)
     NumberOfFiles=length(filename);
 elseif filename ~= 0
@@ -326,7 +320,8 @@ parfor videonumber = 1:NumberOfFiles
             fid = fopen(openfilename,'a+'); %Opens the file
 %             fprintf(fid,'%s\r\n',path);
 %             fprintf(fid,'%s\r\n',FileName);
-            fprintf(fid, '%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n', centroids2);
+            fprintf(fid, '%d,', centroids2(1:end-1));
+            fprintf(fid, '%d\r\n',centroids2(end);
             fclose(fid);
 
         end

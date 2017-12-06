@@ -1,6 +1,6 @@
-function [fl,imgA,imgBold,onelog] = readfr(option,multip,darker,ptThresh)
+function [fl,imgA,imgBold,onelog,bg] = readfr(option,multip,darker,ptThresh)
 
-% readfr is used to test video for new_colorpref_shake 
+% readfr is used to test video and masks for colorpref. 
 % 
 % 
 %   in: option =    1 - read and show one frame.
@@ -65,7 +65,7 @@ elseif option==2
     masks = cellstr(masks);
     vidObj = VideoReader(char(filename));
     background = zeros(vidObj.Height,vidObj.Width);
-    vidObj.CurrentTime = vidObj.Duration/20;
+%     vidObj.CurrentTime = vidObj.Duration*(0.64);
     
         
     
@@ -103,8 +103,8 @@ elseif option==2
         
     end
     %% FIND FLIES
-    vidObj.CurrentTime = vidObj.Duration/20;
-    
+    vidObj.CurrentTime = vidObj.Duration*0.26;
+%     vidObj.CurrentTime = 0.5;
     
     frame = readFrame(vidObj);
     
