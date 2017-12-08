@@ -1,7 +1,7 @@
 function [color_preference,T1,T2,T3,filename,masks,background,vidObj,imgA] = colorpref(flylength,multip,darker,ptThresh)
 % For shacking video every minute
 
-%       flylength     approximate length of flies in videos in pixels. 
+%       flylength   approximate length of flies in videos in pixels. 
 %       multip      multiplies the difference between reference frame and 
 %                   background frame for flies track (default = 10). Use
 %                   higher multip if some flies are not found
@@ -22,8 +22,9 @@ if nargin<2; flylength = 18; end
 if nargin<3; multip = 10; end
 if nargin<4; darker = 0.93; end
 if nargin<5; ptThresh = 0.1; end
-width = 15;                                                                 % Width of tubes used to limit to one fly in a tube
-flysize = 5;                                                                % Objects with area of >=5 pixels are considered to be candidates to be a fly
+width = 15;                                                                 % Width of tubes used to limit to one fly in a tube (default width = 15)
+flysize = 5;                                                                % Objects with area of >=flysize pixels are considered to be candidates to be a fly (default flysize = 5)
+framerate = 60;                                                             % Framerate for color preference 1 frame per seconds*framerate (default framerate = 60)
 color_preference = [];
 T1 = [];
 T2 = [];
@@ -44,7 +45,7 @@ else
     NumberOfFiles = 0;
 end
 
-%first frame to orient others
+% Choose first frame to orient others
 [name_imgA,path_imgA]=uigetfile('*.*','Select video with initial frame',PathName);
 filename_imgA = fullfile(path_imgA, name_imgA);
 vid_imgA = VideoReader(char(filename_imgA));
@@ -248,7 +249,7 @@ while videonumber <= NumberOfFiles
             allbw = allbw+bw;
         end
         
-        Time = floor(vidObj.CurrentTime + 60);
+        Time = floor(vidObj.CurrentTime + framerate);
         if Time>vidObj.Duration && Time<vidObj.Duration+30
             Time = vidObj.Duration;
         end

@@ -21,15 +21,6 @@ disp(color_preference())
 color_preference_names = fieldnames(color_preference);
 fly_strain = input('choose flies to show or type "all" to show all: #');
 
-% From table to individual color preferences
-
-% color_1 = [table2array(T1(:,1)),table2array(T2(:,1)),table2array(T3(:,1))];  %use actual name of genotype 
-% color_2 = [table2array(T1(:,2)),table2array(T2(:,2)),table2array(T3(:,2))];  %in addition to color_
-% color_3 = [table2array(T1(:,3)),table2array(T2(:,3)),table2array(T3(:,3))];
-
-
-
-
 
 % Plotting color distribution
 
@@ -38,7 +29,7 @@ color = color_preference.(char(color_preference_names(fly_strain)));
 if size(color,2) == 3                                                       %For 3 color experiment
     hour = size(color,1)-mod(size(color,1),bin);
     
-    color2(:,1) = sum(reshape(color(1:hour,1),bin,[]));                     %bin from 1 minute to 1 hour
+    color2(:,1) = sum(reshape(color(1:hour,1),bin,[]));                     %bin from framerate of colorpref.m to bin (default bin = 60, 1 hour)
     color2(:,2) = sum(reshape(color(1:hour,2),bin,[]));
     color2(:,3) = sum(reshape(color(1:hour,3),bin,[]));
     
