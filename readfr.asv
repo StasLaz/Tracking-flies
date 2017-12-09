@@ -19,7 +19,7 @@ function [allbw,imgA,imgBold,onelog,bg] = readfr(option,multip,darker,ptThresh)
 %                   smaller ptThresh if there are few objects on video and
 %                   stabilization is not good
 %
-%  out: frames      structure file with all the frames
+%  out: allbw      structure file with all the frames
 %       filename    path for the tested video file
 %       fl          binary image of found flies
 %       imgA        first frame of the video
@@ -30,8 +30,8 @@ function [allbw,imgA,imgBold,onelog,bg] = readfr(option,multip,darker,ptThresh)
 if nargin<2; multip = 10; end
 if nargin<3; darker = 0.93; end
 if nargin<4; ptThresh = 0.1; end
-width = 15;                                                                 % Width of tubes used to limit to one fly in a tube
-flysize = 5;                                                                % Objects with area of >=5 pixels are considered to be candidates to be a fly
+width = 15;                                                                 % Width of tubes used to limit to one fly in a tube (default width = 15)
+flysize = 5;                                                                % Objects with area of >=flysize pixels are considered to be candidates to be a fly (default flysize = 5)
 flylength = 18;                                                             % Approximate length of flies in videos in pixels.
 % Choose video to test
 [FileName, PathName] = uigetfile('*.*' , 'Select video file','MultiSelect','off');
@@ -175,7 +175,7 @@ elseif option==2
         end
         del = [];
         dif = centroids(2:end,indexing)-centroids(1:end-1,indexing);        % Use orientation of tubes and find distance between object in perpendicular to tubes axis
-        sametube = find(dif<width);    
+        sametube = find(dif<width);                                         % Use one fly per tube to eliminate possible wrong objects 
         for tubenumber = 1:length(sametube)
             y = [sametube(tubenumber),sametube(tubenumber)+1];
             
@@ -213,17 +213,18 @@ elseif option==2
             
         end
         allbw = allbw+bw;
-        if exist ('mask1','var')==1
+        % Find number of flies in each mask
+        if exist ('mask1','var')==1                                         % Find flies in first color
             bw1 = bw.*mask1;
             cc1 = bwconncomp(bw1, 8);
             obj1(masknum,t) = cc1.NumObjects;
         end
-        if exist ('mask2','var')==1
+        if exist ('mask2','var')==1                                         % Find flies in second color
             bw2 = bw.*mask2;
             cc2 = bwconncomp(bw2, 8);
             obj2(masknum,t) = cc2.NumObjects;
         end
-        if exist ('mask3','var')==1
+        if exist ('mask3','var')==1                                         % Find flies in third color
             bw3 = bw.*mask3;
             cc3 = bwconncomp(bw3, 8);
             obj3(masknum,t) = cc3.NumObjects;
@@ -232,6 +233,7 @@ elseif option==2
     figure;
     imshowpair(allbw,imgBold);
     t=t+1;
+    % Write number of flies in each color during the video into table with genotypes
     if exist ('obj1','var')==1
         T_green = array2table(obj1(:,1:t-1)','VariableNames', Var);
         T1 = [T1;T_green];

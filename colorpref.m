@@ -1,4 +1,4 @@
-function [color_preference,T1,T2,T3,filename,masks,background,vidObj,imgA] = colorpref(flylength,multip,darker,ptThresh)
+function [color_preference,filename,masks,background,vidObj,imgA] = colorpref(flylength,multip,darker,ptThresh)
 % For shacking video every minute
 
 %       flylength   approximate length of flies in videos in pixels. 

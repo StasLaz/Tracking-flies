@@ -19,7 +19,7 @@ function [allbw,imgA,imgBold,onelog,bg] = readfr(option,multip,darker,ptThresh)
 %                   smaller ptThresh if there are few objects on video and
 %                   stabilization is not good
 %
-%  out: frames      structure file with all the frames
+%  out: allbw      structure file with all the frames
 %       filename    path for the tested video file
 %       fl          binary image of found flies
 %       imgA        first frame of the video
