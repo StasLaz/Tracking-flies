@@ -1,14 +1,14 @@
-function [color_preference,T1,T2,T3,filename,masks,background,vidObj,imgA] = colorpref(flysize,multip,darker,ptThresh)
+function [color_preference,filename,masks,background,vidObj,imgA] = colorpref(flylength,multip,darker,ptThresh)
 % For shacking video every minute
 
-%       flysize     approximate length of flies in videos in pixels. 
+%       flylength   approximate length of flies in videos in pixels. 
 %       multip      multiplies the difference between reference frame and 
-%                   background frame for flies track (deffault = 10). Use
+%                   background frame for flies track (default = 10). Use
 %                   higher multip if some flies are not found
 %       darker      make background darker for better difference
-%                   (deffault = 0.93). Use smaller darker if there is too
+%                   (default = 0.93). Use smaller darker if there is too
 %                   much noise on onelog and false object found.
-%       ptThresh    Threshold for video stabilization (deffault = 0.1). Use
+%       ptThresh    Threshold for video stabilization (default = 0.1). Use
 %                   smaller ptThresh if there are few objects on video and
 %                   stabilization is not good
 %
@@ -18,22 +18,20 @@ function [color_preference,T1,T2,T3,filename,masks,background,vidObj,imgA] = col
 %       imgA        first frame of the video
 %       imgBold     b/w image with flies to find
 %           
-if nargin<2; flysize = 18; end
+if nargin<2; flylength = 18; end
 if nargin<3; multip = 10; end
 if nargin<4; darker = 0.93; end
 if nargin<5; ptThresh = 0.1; end
-
-% multip = 20;                                                                % multiplier for flies track (default = 10)
-% ptThresh = 0.1;                                                             % thrashold for stabilization (default = 0.1)
-% flysize = 30;                                                               % size of fly (default = 18, for old video use 30)
-% darker = 0.93;                                                              % make background darker(deffault = 0.93)
+width = 15;                                                                 % Width of tubes used to limit to one fly in a tube (default width = 15)
+flysize = 5;                                                                % Objects with area of >=flysize pixels are considered to be candidates to be a fly (default flysize = 5)
+framerate = 60;                                                             % Framerate for color preference 1 frame per seconds*framerate (default framerate = 60)
 color_preference = [];
 T1 = [];
 T2 = [];
 T3 = [];
 t=1;
-frame = [];
 %Load video files
+frame = [];
 [FileName, PathName] = uigetfile('*.*' , 'Select video files','MultiSelect','on');
 filename = fullfile(PathName, FileName);
 
@@ -47,7 +45,7 @@ else
     NumberOfFiles = 0;
 end
 
-%first frame
+% Choose first frame to orient others
 [name_imgA,path_imgA]=uigetfile('*.*','Select video with initial frame',PathName);
 filename_imgA = fullfile(path_imgA, name_imgA);
 vid_imgA = VideoReader(char(filename_imgA));
@@ -66,23 +64,15 @@ videonumber = 1;
 %Find color preference for each video
 while videonumber <= NumberOfFiles
     videoname = filename(videonumber);
-    %     [background_frame2,vidObj] = ExtractBackground_two(videoname);
-    
-    %     [T_green,T_blue,T_red] = checkflies_three_manyflies(background,vidObj,masks);
-    
-    
-    
-    
     
     vidObj = VideoReader(char(videoname));
     
     
     vidObj.CurrentTime = 0;
     
-%     Time = vidObj.CurrentTime;
-%     background = imgA;
-    background = [];
-    for Time=vidObj.Duration/20:vidObj.Duration/20-1:vidObj.Duration-3600
+    % Construct background
+    background = zeros(vidObj.Height,vidObj.Width);
+    for Time=vidObj.Duration/20:vidObj.Duration/20-1:vidObj.Duration-3600   % Use multiple fames from video for background
         
         vidObj.CurrentTime = Time;
         frame = readFrame(vidObj);
@@ -101,22 +91,8 @@ while videonumber <= NumberOfFiles
             disp(['Bad frame ', vidObj.Name,' ',num2str(Time)])
             continue
         end
-        %         imgBp = imwarp(imgB, tform, 'OutputView', imref2d(size(imgB)));
-        %         pointsBmp = transformPointsForward(tform, pointsBm.Location);
-%         H = tform.T;
-%         R = H(1:2,1:2);
-%         % Compute theta from mean of two possible arctangents
-%         theta = mean([atan2(R(2),R(1)) atan2(-R(3),R(4))]);
-%         % Compute scale from mean of two stable mean calculations
-%         scale = mean(R([1 4])/cos(theta));
-%         % Translation remains the same:
-%         translation = H(3, 1:2);
-%         % Reconstitute new s-R-t transform:
-%         HsRt = [[scale*[cos(theta) -sin(theta); sin(theta) cos(theta)]; ...
-%             translation], [0 0 1]'];
-%         tformsRT = affine2d(HsRt);
+
         imgBold = imwarp(imgB, tform, 'OutputView', imref2d(size(imgB)));
-        %         imshow(imgBold);
         frame = imgBold;
         if isempty(background)
             background = imgBold;
@@ -138,28 +114,18 @@ while videonumber <= NumberOfFiles
     
     
     
-    
-    %     vidNumber = ceil((n+1)/(480));
-    
+    % Find flies in every assigned frame in the video
     Time = 0;
     while Time<vidObj.Duration
-        
-        
-       
         vidObj.CurrentTime = Time;
-        
-        
         frame = readFrame(vidObj);
-        
-%         Time = Time + 60;
         imgB = im2single(frame(:,:,1));
-        
         pointsB = detectFASTFeatures(imgB, 'MinContrast', ptThresh);
-        
         [featuresB, pointsB] = extractFeatures(imgB, pointsB);
         indexPairs = matchFeatures(featuresA, featuresB);
         pointsA2 = pointsA(indexPairs(:, 1), :);
         pointsB = pointsB(indexPairs(:, 2), :);
+        
         try
             [tform, pointsBm, pointsAm] = estimateGeometricTransform(pointsB, pointsA2, 'affine');
         catch
@@ -172,47 +138,19 @@ while videonumber <= NumberOfFiles
             continue
         end
         
-        %         imgBp = imwarp(imgB, tform, 'OutputView', imref2d(size(imgB)));
-        %         pointsBmp = transformPointsForward(tform, pointsBm.Location);
-%         H = tform.T;
-%         R = H(1:2,1:2);
-%         % Compute theta from mean of two possible arctangents
-%         theta = mean([atan2(R(2),R(1)) atan2(-R(3),R(4))]);
-%         % Compute scale from mean of two stable mean calculations
-%         scale = mean(R([1 4])/cos(theta));
-%         % Translation remains the same:
-%         translation = H(3, 1:2);
-%         % Reconstitute new s-R-t transform:
-%         HsRt = [[scale*[cos(theta) -sin(theta); sin(theta) cos(theta)]; ...
-%             translation], [0 0 1]'];
-%         tformsRT = affine2d(HsRt);
         imgBold = imwarp(imgB, tform, 'OutputView', imref2d(size(imgB)));
-        %         imshow(imgBold);
         frame = imgBold;
-        
-        
-        
-        
-        
         bg = background*darker;
-        %                 differ = imfuse(frame(ttt).cdata,bg,'diff');
-        %                 differ(differ>250) = 0;
         differ = (im2uint8(bg-frame))*multip;
-        
-        % I=differ;
-        % se = strel('disk', 3);
-        % Ie = imerode(I, se);
-        % Iobr = imreconstruct(Ie, I);
-        % Iobrd = imdilate(Iobr, se);
-        % Iobrcbr = imreconstruct(imcomplement(Iobrd), imcomplement(Iobr));
-        % Iobrcbr = imcomplement(Iobrcbr);
-        allbw=false(960,1280);
+        allbw=false(size(differ));
+        % Find flies for each mask
         for masknum = 1:length(masks)
             load(char(masks(masknum)));
             maskobj = bwconncomp(mask3, 8);
             numflies = maskobj.NumObjects;
             [~,name,~]=fileparts(char(masks(masknum)));
             Var(masknum) = cellstr(name);
+            % Find orientation of tubes using masks
             box=false(size(mask3));
             box(maskobj.PixelIdxList{1,1}) = 1;
             [rows, columns] = find(box);
@@ -221,32 +159,20 @@ while videonumber <= NumberOfFiles
             leftColumn = min(columns);
             rightColumn = max(columns);
             orient = (bottomRow-topRow)-(rightColumn-leftColumn);
-            
-            %                     onelog = false(size(differ));
-            %                     onelog(differ>20) = true;
-            %                     bw = onelog.*maskall;
             onelog = differ;
             onelog(onelog<254) = 0;
-            bw = onelog.*uint8(maskall);
-            bw = bwareaopen(bw, 5);
-            cc = bwconncomp(bw, 8);
-            your_count = sum(cellfun(@(x) numel(x),cc.PixelIdxList));
-            %                     if your_count>numflies*125
-            %                         onelog = false(size(differ));
-            %                         onelog(differ>40) = true;
-            %                         bw = onelog.*maskall;
-            %                         bw = bwareaopen(bw, 5);
-            %                         cc = bwconncomp(bw, 8);
-            %                     end
-            stats = regionprops('table',cc,'MajorAxisLength');
+            bw = onelog.*uint8(maskall);             
+            bw = bwareaopen(bw, flysize);                                   % Delete objects smaller than permitted fly size
+            cc = bwconncomp(bw, 8);                                         % Find all permitted objects
             
-            x = find (table2array(stats(:,{'MajorAxisLength'}))>flysize);
+            stats = regionprops('table',cc,'MajorAxisLength');              % Delete large objects 
+            x = find (table2array(stats(:,{'MajorAxisLength'}))>flylength);
             
             for i=1:length(x)
                 bw(cc.PixelIdxList{x(i)}) = 0;
             end
             cc = bwconncomp(bw, 8);
-            ar = regionprops(cc,'Centroid');
+            ar = regionprops(cc,'Centroid');                                % Find centers of remaining objects
             centroids = cat(1, ar.Centroid);
             ind=[];
             if isempty(centroids)==1
@@ -255,8 +181,8 @@ while videonumber <= NumberOfFiles
                 disp(masks(masknum))
                 continue
             end
-            if orient>=0
-                
+            % Find if there more than one object per tube and leave only biggest
+            if orient>=0                                                    % sort coordinates of centers along the axis perpendicular to tubes
                 indexing = 1;
                 [centroids,ind] = sortrows(centroids,1);
             elseif orient<0
@@ -264,8 +190,8 @@ while videonumber <= NumberOfFiles
                 indexing = 2;
             end
             del = [];
-            dif = centroids(2:end,indexing)-centroids(1:end-1,indexing);
-            sametube = find(dif<15);
+            dif = centroids(2:end,indexing)-centroids(1:end-1,indexing);    % Use orientation of tubes and find distance between object in perpendicular to tubes axis
+            sametube = find(dif<width);                                     % Use one fly per tube to eliminate possible wrong objects
             for tubenumber = 1:length(sametube)
                 y = [sametube(tubenumber),sametube(tubenumber)+1];
                 
@@ -303,47 +229,33 @@ while videonumber <= NumberOfFiles
                 
             end
             
-            
-            if exist ('mask1','var')==1
+            % Find number of flies in each mask
+            if exist ('mask1','var')==1                                     % Find flies in first color
                 bw1 = bw.*mask1;
                 cc1 = bwconncomp(bw1, 8);
                 obj1(masknum,t) = cc1.NumObjects;
             end
-            if exist ('mask2','var')==1
+            if exist ('mask2','var')==1                                     % Find flies in second color
                 bw2 = bw.*mask2;
                 cc2 = bwconncomp(bw2, 8);
                 obj2(masknum,t) = cc2.NumObjects;
             end
-            if exist ('mask3','var')==1
+            if exist ('mask3','var')==1                                     % Find flies in third color
                 bw3 = bw.*mask3;
                 cc3 = bwconncomp(bw3, 8);
                 obj3(masknum,t) = cc3.NumObjects;
             end
-%             cc = bwconncomp(bw, 8);
-%             ar = regionprops(cc,'Centroid');
-%             centroids2 = cat(1, ar.Centroid);
-%             num2 = min(size(centroids2,1),numflies);
-%             centroids2 = [centroids2(1:min(size(centroids2,1),numflies),:);zeros((36-num2),2)];
-%             centroids2 = round(centroids2);
-%             
-%             coord = [coord,centroids2];
-%             openfilename = ['coord',name(5:end),'.csv'];
-%             fid = fopen(openfilename,'a+'); %Opens the file
-%             fprintf(fid, '%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n', centroids2);
-%             fclose(fid);
+
             allbw = allbw+bw;
         end
         
-        
-        
-        
-        Time = floor(vidObj.CurrentTime + 60);
+        Time = floor(vidObj.CurrentTime + framerate);
         if Time>vidObj.Duration && Time<vidObj.Duration+30
             Time = vidObj.Duration;
         end
         t=t+1;
-        %     Color = [Color;color];
     end
+    % Write number of flies in each color during the video into table with genotypes
     if exist ('obj1','var')==1
         T_green = array2table(obj1(:,1:t-1)','VariableNames', Var);
         T1 = [T1;T_green];
@@ -357,30 +269,10 @@ while videonumber <= NumberOfFiles
         T3 = [T3;T_red];
     end
     
-    
-    
-    
-    
     t=1;
-    
-    
-    
-    
-    
     videonumber = videonumber+1;
-    % total = sum(Color,2);
-    % colornorm(:,1) = Color(:,1)./total;
-    % colornorm(:,2) = Color(:,2)./total;
-    % colornorm(:,3) = Color(:,3)./total;
-    
-    %     colorfile = fullfile(PathName,['color_pref_', savefile]);
-    % colorfile_norm = fullfile(PathName,['color_pref_','norm_', savefile]);
-    %     save(colorfile,'color');
-    % save(colorfile_norm,'colornorm');
-    
-    
-    
 end
+% Combine table from all videos
 for i=1:length(Var)
 color_preference = setfield(color_preference, ['color_',Var{i}(7:end)],...
     [table2array(T1(:,i)),table2array(T2(:,i)),table2array(T3(:,i))]);

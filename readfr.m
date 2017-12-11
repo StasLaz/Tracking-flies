@@ -1,6 +1,6 @@
-function [fl,imgA,imgBold,onelog] = readfr(option,multip,darker,ptThresh)
+function [allbw,imgA,imgBold,onelog,bg] = readfr(option,multip,darker,ptThresh)
 
-% readfr is used to test video for new_colorpref_shake 
+% readfr is used to test video and masks for colorpref.m 
 % 
 % 
 %   in: option =    1 - read and show one frame.
@@ -19,7 +19,7 @@ function [fl,imgA,imgBold,onelog] = readfr(option,multip,darker,ptThresh)
 %                   smaller ptThresh if there are few objects on video and
 %                   stabilization is not good
 %
-%  out: frames      structure file with all the frames
+%  out: allbw      structure file with all the frames
 %       filename    path for the tested video file
 %       fl          binary image of found flies
 %       imgA        first frame of the video
@@ -30,10 +30,15 @@ function [fl,imgA,imgBold,onelog] = readfr(option,multip,darker,ptThresh)
 if nargin<2; multip = 10; end
 if nargin<3; darker = 0.93; end
 if nargin<4; ptThresh = 0.1; end
-                                                                 
+width = 15;                                                                 % Width of tubes used to limit to one fly in a tube (default width = 15)
+flysize = 5;                                                                % Objects with area of >=flysize pixels are considered to be candidates to be a fly (default flysize = 5)
+flylength = 18;                                                             % Approximate length of flies in videos in pixels.
+% Choose video to test
 [FileName, PathName] = uigetfile('*.*' , 'Select video file','MultiSelect','off');
 filename = fullfile(PathName, FileName);
-
+% Select time point to find flies
+Timepoint = inputdlg({'Hour','Minute','Second'},'Select time point', [1 40; 1 40; 1 40],{'2','0','0'});
+Timepoint = str2double(Timepoint);
 T1 = [];
 T2 = [];
 T3 = [];
@@ -43,36 +48,35 @@ t=1;
 %% READ AND SHOW FRAME
 if option==1    
     vidObj = VideoReader(char(filename));
-    Time = inputdlg({'Hour','Minute','Second'},'Time point', [1 7; 1 7; 1 7],{'2','0','0'});
-    Time = str2double(Time);
-    vidObj.CurrentTime = Time(1)*3600+Time(2)*60+Time(3);
+    vidObj.CurrentTime = Timepoint(1)*3600+Timepoint(2)*60+Timepoint(3);
     imgA = readFrame(vidObj);
     figure;
     imshow(uint8(imgA));
-    fl=[];
+    allbw=[];
     imgBold=[];
     onelog=[];
+    bg=[];
 
-%% READ FRAME AND TEST MASKS FOR COLORPREF
+%% READ FRAME AND TEST MASKS FOR COLORPREF.M
 elseif option==2                                                               
+    % Choose first frame to orient the other
     [name_imgA,path_imgA]=uigetfile('*.*','Select video with initial frame',PathName);
     filename_imgA = fullfile(path_imgA, name_imgA);
     vid_imgA = VideoReader(char(filename_imgA));
     base = readFrame(vid_imgA);
     imgA = im2single(base(:,:,1));
+    %Load masks
     [name,path]=uigetfile('.mat','Select masks',PathName,'Multiselect','on');
     masks = fullfile(path,name);
     masks = cellstr(masks);
     vidObj = VideoReader(char(filename));
     background = zeros(vidObj.Height,vidObj.Width);
-    vidObj.CurrentTime = vidObj.Duration/20;
     
         
     
     pointsA = detectFASTFeatures(imgA, 'MinContrast', ptThresh);
     [featuresA, pointsA] = extractFeatures(imgA, pointsA);
-%     background = imgA;
-    %% CALCULATE BACKGROUND
+    % Construct background
     for Time=vidObj.Duration/20:vidObj.Duration/20-1:vidObj.Duration-1
         
         vidObj.CurrentTime = Time;
@@ -102,16 +106,11 @@ elseif option==2
         
         
     end
-    %% FIND FLIES
-    vidObj.CurrentTime = vidObj.Duration/20;
-    
-    
+    % Find flies
+    vidObj.CurrentTime = Timepoint(1)*3600+Timepoint(2)*60+Timepoint(3);
     frame = readFrame(vidObj);
-    
     imgB = im2single(frame(:,:,1));
-    
     pointsB = detectFASTFeatures(imgB, 'MinContrast', ptThresh);
-    
     [featuresB, pointsB] = extractFeatures(imgB, pointsB);
     indexPairs = matchFeatures(featuresA, featuresB);
     pointsA2 = pointsA(indexPairs(:, 1), :);
@@ -125,18 +124,18 @@ elseif option==2
     
     
     bg = background*darker;
-    %                 differ = imfuse(frame(ttt).cdata,bg,'diff');
-    %                 differ(differ>250) = 0;
     differ = (im2uint8(bg-frame))*multip;
     onelog = differ;
     onelog(onelog<254) = 0;
-    fl = false(size(onelog));
+    allbw = false(size(onelog));
+    % Find flies for each mask
     for masknum = 1:length(masks)
         load(char(masks(masknum)));
         maskobj = bwconncomp(maskall, 8);
         numflies = maskobj.NumObjects;
         [~,name,~]=fileparts(char(masks(masknum)));
         Var(masknum) = cellstr(name);
+        % Find orientation of tubes using masks
         box=false(size(maskall));
         box(maskobj.PixelIdxList{1,1}) = 1;
         [rows, columns] = find(box);
@@ -147,16 +146,16 @@ elseif option==2
         orient = (bottomRow-topRow)-(rightColumn-leftColumn);
         
         bw = onelog.*uint8(maskall);
-        bw = bwareaopen(bw, 5);
-        cc = bwconncomp(bw, 8);
+        bw = bwareaopen(bw, flysize);                                       % Delete objects smaller than permitted fly size
+        cc = bwconncomp(bw, 8);                                             % Find all permitted objects
         stats = regionprops('table',cc,'MajorAxisLength');
-        x = find (table2array(stats(:,{'MajorAxisLength'}))>30);
+        x = find (table2array(stats(:,{'MajorAxisLength'}))>flylength);
         
         for i=1:length(x)
             bw(cc.PixelIdxList{x(i)}) = 0;
         end
         cc = bwconncomp(bw, 8);
-        ar = regionprops(cc,'Centroid');
+        ar = regionprops(cc,'Centroid');                                    % Find centers of remaining objects
         centroids = cat(1, ar.Centroid);
         ind=[];
         if isempty(centroids)==1
@@ -165,7 +164,8 @@ elseif option==2
             disp(masks(masknum))
             continue
         end
-        if orient>=0
+         % Find if there more than one object per tube and leave only biggest
+        if orient>=0                                                        % sort coordinates of centers along the axis perpendicular to tubes
             
             indexing = 1;
             [centroids,ind] = sortrows(centroids,1);
@@ -174,8 +174,8 @@ elseif option==2
             indexing = 2;
         end
         del = [];
-        dif = centroids(2:end,indexing)-centroids(1:end-1,indexing);
-        sametube = find(dif<15);
+        dif = centroids(2:end,indexing)-centroids(1:end-1,indexing);        % Use orientation of tubes and find distance between object in perpendicular to tubes axis
+        sametube = find(dif<width);                                         % Use one fly per tube to eliminate possible wrong objects 
         for tubenumber = 1:length(sametube)
             y = [sametube(tubenumber),sametube(tubenumber)+1];
             
@@ -212,26 +212,28 @@ elseif option==2
             end
             
         end
-        fl = fl+bw;
-        if exist ('mask1','var')==1
+        allbw = allbw+bw;
+        % Find number of flies in each mask
+        if exist ('mask1','var')==1                                         % Find flies in first color
             bw1 = bw.*mask1;
             cc1 = bwconncomp(bw1, 8);
             obj1(masknum,t) = cc1.NumObjects;
         end
-        if exist ('mask2','var')==1
+        if exist ('mask2','var')==1                                         % Find flies in second color
             bw2 = bw.*mask2;
             cc2 = bwconncomp(bw2, 8);
             obj2(masknum,t) = cc2.NumObjects;
         end
-        if exist ('mask3','var')==1
+        if exist ('mask3','var')==1                                         % Find flies in third color
             bw3 = bw.*mask3;
             cc3 = bwconncomp(bw3, 8);
             obj3(masknum,t) = cc3.NumObjects;
         end
     end
     figure;
-    imshowpair(fl,imgBold);
+    imshowpair(allbw,imgBold);
     t=t+1;
+    % Write number of flies in each color during the video into table with genotypes
     if exist ('obj1','var')==1
         T_green = array2table(obj1(:,1:t-1)','VariableNames', Var);
         T1 = [T1;T_green];
