@@ -2,6 +2,8 @@ Tracking-flies
 ==============
 code for tracking flies in glass tubes.
 
+[![Demo Video](resources/videoDemo.png)](http://www.youtube.com/watch?v=By5CWHpuqNg/)
+
 FEATURES
 --------
 
@@ -31,4 +33,4 @@ Run:
 EXAMPLES
 --------
 
-![Alt text](/examples/Frame.jpg "alalal")
+![Alt text](/examples/Frame "alalal")(http://www.youtube.com/watch?v=By5CWHpuqNg/)
