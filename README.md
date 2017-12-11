@@ -27,3 +27,8 @@ Run:
 5) preference_calculation.m to find average fractions of flies during day and average avoidance
 
 6) trackfly.m to find coordinates of flies 
+
+EXAMPLES
+--------
+
+(examples/Frame.tif)
