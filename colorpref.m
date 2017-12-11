@@ -114,7 +114,7 @@ while videonumber <= NumberOfFiles
     
     
     
-    % Find flies for each frame in the video
+    % Find flies in every assigned frame in the video
     Time = 0;
     while Time<vidObj.Duration
         vidObj.CurrentTime = Time;
