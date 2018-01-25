@@ -152,7 +152,7 @@ elseif option==2
         bw = bwareaopen(bw, flyarea_min);                                       % Delete objects smaller than permitted fly size
         cc = bwconncomp(bw, 8);                                             % Find all permitted objects
         stats = regionprops('table',cc,'MajorAxisLength');
-        x = find (table2array(stats(:,{'MajorAxisLength'}))>flylength*1.5); % Delete objects bigger than 1.5 fly size
+        x = find (table2array(stats(:,{'MajorAxisLength'}))>flylength*1.5);
         
         for i=1:length(x)
             bw(cc.PixelIdxList{x(i)}) = 0;
@@ -209,38 +209,38 @@ elseif option==2
             
         end
         allbw = allbw+bw;
-%         % Find number of flies in each mask
-%         if exist ('mask1','var')==1                                         % Find flies in first color
-%             bw1 = bw.*mask1;
-%             cc1 = bwconncomp(bw1, 8);
-%             obj1(masknum,t) = cc1.NumObjects;
-%         end
-%         if exist ('mask2','var')==1                                         % Find flies in second color
-%             bw2 = bw.*mask2;
-%             cc2 = bwconncomp(bw2, 8);
-%             obj2(masknum,t) = cc2.NumObjects;
-%         end
-%         if exist ('mask3','var')==1                                         % Find flies in third color
-%             bw3 = bw.*mask3;
-%             cc3 = bwconncomp(bw3, 8);
-%             obj3(masknum,t) = cc3.NumObjects;
-%         end
+        % Find number of flies in each mask
+        if exist ('mask1','var')==1                                         % Find flies in first color
+            bw1 = bw.*mask1;
+            cc1 = bwconncomp(bw1, 8);
+            obj1(masknum,t) = cc1.NumObjects;
+        end
+        if exist ('mask2','var')==1                                         % Find flies in second color
+            bw2 = bw.*mask2;
+            cc2 = bwconncomp(bw2, 8);
+            obj2(masknum,t) = cc2.NumObjects;
+        end
+        if exist ('mask3','var')==1                                         % Find flies in third color
+            bw3 = bw.*mask3;
+            cc3 = bwconncomp(bw3, 8);
+            obj3(masknum,t) = cc3.NumObjects;
+        end
     end
     figure;
     imshowpair(allbw,imgBold);
     t=t+1;
-%     % Write number of flies in each color during the video into table with genotypes
-%     if exist ('obj1','var')==1
-%         T_green = array2table(obj1(:,1:t-1)','VariableNames', Var);
-%         T1 = [T1;T_green];
-%     end
-%     if exist ('obj2','var')==1
-%         T_blue = array2table(obj2(:,1:t-1)','VariableNames', Var);
-%         T2 = [T2;T_blue];
-%     end
-%     if exist ('obj3','var')==1
-%         T_red = array2table(obj3(:,1:t-1)','VariableNames', Var);
-%         T3 = [T3;T_red];
-%     end
+    % Write number of flies in each color during the video into table with genotypes
+    if exist ('obj1','var')==1
+        T_green = array2table(obj1(:,1:t-1)','VariableNames', Var);
+        T1 = [T1;T_green];
+    end
+    if exist ('obj2','var')==1
+        T_blue = array2table(obj2(:,1:t-1)','VariableNames', Var);
+        T2 = [T2;T_blue];
+    end
+    if exist ('obj3','var')==1
+        T_red = array2table(obj3(:,1:t-1)','VariableNames', Var);
+        T3 = [T3;T_red];
+    end
  
 end
