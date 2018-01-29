@@ -1,7 +1,8 @@
-function [color_preference,filename,masks,background,vidObj,imgA] = colorpref(flylength,multip,darker,ptThresh)
+function [color_preference,filename,allbw,background,imgBold,imgA] = colorpref(flylength,multip,darker,ptThresh)
 % For shacking video every minute
 
-%       flylength   approximate length of flies in videos in pixels. 
+%       flylength   approximate length of flies in videos in pixels 
+%                   (default = 10). 
 %       multip      multiplies the difference between reference frame and 
 %                   background frame for flies track (default = 10). Use
 %                   higher multip if some flies are not found
@@ -22,8 +23,8 @@ if nargin<2; flylength = 18; end
 if nargin<3; multip = 10; end
 if nargin<4; darker = 0.93; end
 if nargin<5; ptThresh = 0.1; end
-width = 15;                                                                 % Width of tubes used to limit to one fly in a tube (default width = 15)
-flysize = 50;                                                                % Objects with area of >=flysize pixels are considered to be candidates to be a fly (default flysize = 5)
+flyarea_min = floor(flylength*1.5);                                         % Objects with area of >=flyarea_min pixels are considered to be candidates to be a fly (default flysize = 5)
+tube_diameter = floor(flylength*1.5);                                       % Width of tubes used to limit to one fly in a tube (default width = 15)
 framerate = 60;                                                             % Framerate for color preference 1 frame per seconds*framerate (default framerate = 60)
 color_preference = [];
 T1 = [];
@@ -162,11 +163,11 @@ while videonumber <= NumberOfFiles
             onelog = differ;
             onelog(onelog<254) = 0;
             bw = onelog.*uint8(maskall);             
-            bw = bwareaopen(bw, flysize);                                   % Delete objects smaller than permitted fly size
+            bw = bwareaopen(bw, flyarea_min);                               % Delete objects smaller than permitted fly size
             cc = bwconncomp(bw, 8);                                         % Find all permitted objects
             
             stats = regionprops('table',cc,'MajorAxisLength');              % Delete large objects 
-            x = find (table2array(stats(:,{'MajorAxisLength'}))>flylength);
+            x = find (table2array(stats(:,{'MajorAxisLength'}))>flylength*1.5);
             
             for i=1:length(x)
                 bw(cc.PixelIdxList{x(i)}) = 0;
@@ -189,7 +190,7 @@ while videonumber <= NumberOfFiles
             end
             sametube=[];
             bw = false(size(bw));
-            ab = cellfun(@numel,cc.PixelIdxList);                           %find size of 
+            ab = cellfun(@numel,cc.PixelIdxList);                           %find size of objects
             sametube(:,1)=centroids(:,indexing);
             sametube(:,2)=ab;
             for tubenumber = 1:size(sametube,1)
