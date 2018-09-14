@@ -1,4 +1,4 @@
-function [PathName] = trackfly(flylength,multip,darker,ptThresh)
+function [PathName] = trackfly(multip,darker,ptThresh)
 % Finds flies positions for shacking video every second and writes down in
 % file
 
@@ -17,13 +17,12 @@ function [PathName] = trackfly(flylength,multip,darker,ptThresh)
 %           coordinates are stored in xls files in PathName location
 
 
-if nargin<1; flylength = 18; end
-if nargin<2; multip = 10; end
-if nargin<3; darker = 0.93; end
-if nargin<4; ptThresh = 0.1; end
-flyarea_min = floor(flylength*1.5);                                         % Objects with area of >=flyarea_min pixels are considered to be candidates to be a fly (default flysize = 5)
-tube_diameter = floor(flylength*1.5);                                       % Width of tubes used to limit to one fly in a tube (default width = 15)
-framerate = 1;                                                             % Framerate for color preference 1 frame per seconds*framerate (default framerate = 60)
+if nargin<1; multip = 10; end
+if nargin<2; darker = 0.93; end
+if nargin<3; ptThresh = 0.1; end
+width = 15;                                                                 % Width of tubes used to limit to one fly in a tube (default width = 15)
+flysize = 5;                                                                % Objects with area of >=flysize pixels are considered to be candidates to be a fly (default flysize = 5)
+framerate = 60;                                                             % Framerate for color preference 1 frame per seconds*framerate (default framerate = 60)
 
 T1 = [];
 T2 = [];
@@ -82,7 +81,7 @@ pointsA = detectFASTFeatures(imgA, 'MinContrast', ptThresh);
 
 videonumber = 1;
 
-for videonumber = 1:NumberOfFiles
+parfor videonumber = 1:NumberOfFiles
     videoname = filename(videonumber);
     t=1;
     frame = struct('cdata',[],'colormap',[]);
@@ -175,11 +174,10 @@ for videonumber = 1:NumberOfFiles
             onelog = differ;
             onelog(onelog<254) = 0;
             bw = onelog.*uint8(asdf.maskall);
-            bw = bwareaopen(bw, flyarea_min);                               % Delete objects smaller than permitted fly size
-            cc = bwconncomp(bw, 8);                                         % Find all permitted objects
-            
-            stats = regionprops('table',cc,'MajorAxisLength');              % Delete large objects 
-            x = find (table2array(stats(:,{'MajorAxisLength'}))>flylength*1.5);
+            bw = bwareaopen(bw, flysize);
+            cc = bwconncomp(bw, 8);
+            stats = regionprops('table',cc,'Centroid','MajorAxisLength','MinorAxisLength','BoundingBox');
+            x = find (table2array(stats(:,{'MajorAxisLength'}))>18);
             
             for i=1:length(x)
                 bw(cc.PixelIdxList{x(i)}) = 0;
@@ -194,27 +192,33 @@ for videonumber = 1:NumberOfFiles
                 disp(masks(masknum))
                 continue
             end
-            % Find if there more than one object per tube and leave only biggest
-            if orient>=0                                                    % find orientation of tubes
+            if orient>0
+                
                 indexing = 1;
+                [centroids,ind] = sortrows(centroids,1);
             elseif orient<0
+                [centroids,ind] = sortrows(centroids,2);
                 indexing = 2;
             end
-            sametube=[];
-            bw = false(size(bw));
-            ab = cellfun(@numel,cc.PixelIdxList);                           %find size of objects
-            sametube(:,1)=centroids(:,indexing);
-            sametube(:,2)=ab;
-            for tubenumber = 1:size(sametube,1)
-                near_flies = find(sametube(:,1)>(sametube(tubenumber,1)-tube_diameter)&sametube(:,1)<(sametube(tubenumber,1)+tube_diameter));
-                [~,ind2] = max(sametube(near_flies,2));
-                real_fly = near_flies(ind2);
+            del = [];
+            dif = centroids(2:end,indexing)-centroids(1:end-1,indexing);
+            sametube = find(dif<width);
+            for tubenumber = 1:length(sametube)
+                y = [sametube(tubenumber),sametube(tubenumber)+1];
                 
-                bw(cc.PixelIdxList{real_fly}) = true;
+                ab = zeros(length(cc.PixelIdxList),1);
+                if isempty(ind)==1
+                    ab(y) = cellfun(@numel,cc.PixelIdxList(y));
+                else
+                    ab(ind(y)) = cellfun(@numel,cc.PixelIdxList(ind(y)));
+                end
+                z = find(ab == min(ab(ab>0)));
+                del = [del;z];
             end
-            cc = bwconncomp(bw, 8);
-            ar = regionprops(cc,'Centroid');
-            centroids = cat(1, ar.Centroid);
+            centroids(del,:)=[];
+            if isempty(del)==0
+                cc.PixelIdxList(del)=[];
+            end
             num = min(size(centroids,1),numflies);
             
             if num ~= 0
@@ -248,10 +252,8 @@ for videonumber = 1:NumberOfFiles
            path = [PathName,'coord',name(5:end)];
             openfilename = [path,'\','coord',name(5:end),'_',char(vidname(videonumber,:)),'.csv'];
             fid = fopen(openfilename,'a+'); %Opens the file
-            fprintf(fid, '%d,', centroids2(1:end-1,1));
-            fprintf(fid, '%d\r\n',centroids2(end,1));
-            fprintf(fid, '%d,', centroids2(1:end-1,2));
-            fprintf(fid, '%d\r\n',centroids2(end,2));
+            fprintf(fid, '%d,', centroids2(1:end-1));
+            fprintf(fid, '%d\r\n',centroids2(end));
             fclose(fid);
 
        end

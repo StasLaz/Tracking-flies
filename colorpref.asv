@@ -19,10 +19,10 @@ function [color_preference,filename,allbw,background,imgBold,imgA] = colorpref(f
 %       imgA        first frame of the video
 %       imgBold     b/w image with flies to find
 %           
-if nargin<1; flylength = 18; end
-if nargin<2; multip = 10; end
-if nargin<3; darker = 0.93; end
-if nargin<4; ptThresh = 0.1; end
+if nargin<2; flylength = 18; end
+if nargin<3; multip = 10; end
+if nargin<4; darker = 0.93; end
+if nargin<5; ptThresh = 0.1; end
 flyarea_min = floor(flylength*1.5);                                         % Objects with area of >=flyarea_min pixels are considered to be candidates to be a fly (default flysize = 5)
 tube_diameter = floor(flylength*1.5);                                       % Width of tubes used to limit to one fly in a tube (default width = 15)
 framerate = 60;                                                             % Framerate for color preference 1 frame per seconds*framerate (default framerate = 60)
@@ -73,7 +73,7 @@ while videonumber <= NumberOfFiles
     
     % Construct background
     background = zeros(vidObj.Height,vidObj.Width);
-    for Time=vidObj.Duration/20:vidObj.Duration/20-1:vidObj.Duration*(19/20)   % Use multiple fames from video for background
+    for Time=vidObj.Duration/20:vidObj.Duration/20-1:vidObj.Duration-3600   % Use multiple fames from video for background
         
         vidObj.CurrentTime = Time;
         frame = readFrame(vidObj);
@@ -108,7 +108,13 @@ while videonumber <= NumberOfFiles
         
         
     end
- 
+    
+    
+    
+    
+    
+    
+    
     % Find flies in every assigned frame in the video
     Time = 0;
     while Time<vidObj.Duration
